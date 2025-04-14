@@ -1,20 +1,35 @@
-import crypto from "crypto";
 import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
 
-import { extname, resolve } from "path";
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key: process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET,
+});
 
 export default {
-  upload(folder: string) {
+  upload() {
     return {
-      storage: multer.diskStorage({
-        destination: resolve(__dirname, "..", "..", folder),
-        filename: (request, file, callback) => {
-          const fileHash = crypto.randomBytes(16).toString("hex");
-          const fileName = `${fileHash}-${file.originalname}`;
-
-          return callback(null, fileName);
-        },
-      }),
+      storage: multer.memoryStorage(), // Armazenamento em memória
     };
+  },
+
+  // Função para enviar o arquivo para o Cloudinary
+  uploadToCloudinary(file: Express.Multer.File) {
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: "auto",
+          public_id: file.originalname,
+        },
+        (error, result) => {
+          if (error) {
+            return reject(error);
+          }
+          return resolve(result);
+        }
+      );
+      stream.end(file.buffer);
+    });
   },
 };

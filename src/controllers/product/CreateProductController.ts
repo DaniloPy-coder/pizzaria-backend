@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { CreateProductService } from "../../services/product/CreateProductService";
 import { UploadedFile } from "express-fileupload";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import { v4 as uuid } from "uuid";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
@@ -13,38 +14,48 @@ class CreateProductController {
   async handle(req: Request, res: Response) {
     const { name, price, description, category_id } = req.body;
 
-    if (!req.files || Object.keys(req.files).length === 0) {
-      throw new Error("Error upload file image");
+    if (!req.files || !req.files["file"]) {
+      return res.status(400).json({ error: "Arquivo da imagem não enviado." });
     }
 
     const file = req.files["file"] as UploadedFile;
+    const uniqueName = `${uuid()}-${file.name}`;
 
-    const resultFile = await new Promise<UploadApiResponse>(
-      (resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          (error, result) => {
-            if (error || !result) {
-              return reject(error);
+    try {
+      const resultFile = await new Promise<UploadApiResponse>(
+        (resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              resource_type: "auto",
+              public_id: `products/${uniqueName}`,
+            },
+            (error, result) => {
+              if (error || !result) {
+                console.error("Erro ao enviar imagem:", error);
+                return reject(error);
+              }
+              resolve(result);
             }
-            resolve(result);
-          }
-        );
+          );
 
-        uploadStream.end(file.data);
-      }
-    );
+          uploadStream.end(file.data);
+        }
+      );
 
-    const createProductService = new CreateProductService();
+      const createProductService = new CreateProductService();
 
-    const menu = await createProductService.execute({
-      name,
-      price,
-      description,
-      banner: resultFile.url,
-      category_id,
-    });
+      const menu = await createProductService.execute({
+        name,
+        price,
+        description,
+        banner: resultFile.secure_url,
+        category_id,
+      });
 
-    return res.json(menu);
+      return res.json(menu);
+    } catch (error) {
+      return res.status(500).json({ error: "Erro ao criar produto." });
+    }
   }
 }
 
