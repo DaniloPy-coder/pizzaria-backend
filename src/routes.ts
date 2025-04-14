@@ -28,7 +28,7 @@ import uploadConfig from "./config/multer";
 
 const router = Router();
 
-const upload = multer(uploadConfig.upload("./tmp"));
+const upload = multer(uploadConfig.upload());
 
 //-- ROTAS USER --
 const createUserController = new CreateUserController();
