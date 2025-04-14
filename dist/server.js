@@ -30,4 +30,4 @@ app.use((err, req, res, next) => {
         });
     }
 });
-app.listen(process.env.PORT, () => console.log("Server Online"));
+exports.default = app;
