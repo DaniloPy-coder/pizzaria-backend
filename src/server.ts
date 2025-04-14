@@ -31,4 +31,4 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-app.listen(process.env.PORT, () => console.log("Server Online"));
+export default app;
